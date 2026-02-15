@@ -19,10 +19,6 @@ class Goal(models.Model):
     deadline_at = models.DateTimeField(verbose_name=_('deadline'), null=True, blank=True, db_index=True)
     status = models.CharField(verbose_name=_('status'), max_length=20, choices=StatusChoices, default=StatusChoices.PENDING, db_index=True)
 
-    @property
-    def total_time_spent(self):
-        return sum(subgoal.total_time_spent for subgoal in self.subgoals.all())
-
     class Meta:
         db_table = 'goal'
         unique_together = ('user', 'name')
@@ -45,10 +41,6 @@ class SubGoal(models.Model):
     deadline_at = models.DateTimeField(verbose_name=_('deadline'), null=True, blank=True)
     status = models.CharField(verbose_name=_('status'), max_length=20, choices=StatusChoices, default=StatusChoices.PENDING, db_index=True)
 
-    @property
-    def total_time_spent(self):
-        return sum(skill.total_time_spent for skill in self.skills.all())
-
     class Meta:
         db_table = 'subgoal'
         unique_together = ('goal', 'name')
@@ -69,12 +61,6 @@ class Skill(models.Model):
     started_at = models.DateTimeField(verbose_name=_('start date'), null=True, blank=True)
     completed_at = models.DateTimeField(verbose_name=_('end date'),  null=True, blank=True)
     status = models.CharField(verbose_name=_('status'), max_length=20, choices=StatusChoices, default=StatusChoices.PENDING, db_index=True)
-    
-    @property
-    def total_time_spent(self):
-        return self.daily_reviews_skill.aggregate(
-            total=models.Sum('time_spent')
-        )['total'] or 0
 
     class Meta:
         db_table = 'skill'

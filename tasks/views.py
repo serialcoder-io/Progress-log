@@ -1,16 +1,24 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Prefetch, F, Window
-from django.db.models.functions import RowNumber
+from django.db.models import Prefetch, Subquery, OuterRef
 from .models import Goal, SubGoal, Skill
+from reviews.models import DailyReview, WeeklyReview, MonthlyReview, DailyReviewSkill
 from django.db.models import Count, Q, F, ExpressionWrapper, IntegerField, Value, Sum, Case, When
-from django.db.models.functions import Coalesce, Cast
+from django.db.models.functions import Coalesce
 
 
 @login_required
 def goals(request):
-    goals = (
+    daily_time_subquery = (
+        DailyReviewSkill.objects
+        .filter(skill__subgoal__goal=OuterRef("pk"))
+        .values("skill__subgoal__goal")
+        .annotate(total=Sum("time_spent"))
+        .values("total")
+    )
+    goals_list = (
         request.user.goals
         .annotate(
             all_subgoals_count=Count("subgoals", distinct=True),
@@ -21,7 +29,7 @@ def goals(request):
             ),
             skills_count=Count("subgoals__skills", distinct=True),
             time_spent=Coalesce(
-                Sum('subgoals__skills__daily_reviews_skill__time_spent'),
+                Subquery(daily_time_subquery),
                 Value(0),
                 output_field=IntegerField()
             ),
@@ -35,7 +43,7 @@ def goals(request):
         ).order_by("created_at")
     )
 
-    paginator = Paginator(goals, 10)
+    paginator = Paginator(goals_list, 10)
     page_number = request.GET.get("page", 1)
     page_obj = paginator.get_page(page_number)
     context = {"page_obj": page_obj}
@@ -47,6 +55,7 @@ def goals(request):
 
 @login_required
 def goal_details(request, goal_id):
+    current_user = request.user
     goal = get_object_or_404(
         Goal.objects.annotate(
             skills_count=Count("subgoals__skills", distinct=True),
@@ -75,7 +84,7 @@ def goal_details(request, goal_id):
             )
         ),
         id=goal_id, 
-        user=request.user
+        user=current_user
     )
 
     subgoals = (
