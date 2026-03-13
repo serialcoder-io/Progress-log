@@ -221,7 +221,6 @@ docker compose exec web python manage.py createsuperuser
 Backend-focused developer building structured systems for disciplined technical growth.
 
 - github [Github](https://github.com/anliomar-dev)
-- portfolio [Portfolio](https://omartech.site)
 - email: anliomar@outlook.com
 
 
